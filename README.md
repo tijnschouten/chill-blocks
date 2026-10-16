@@ -14,8 +14,11 @@ These are enforced in code, not left to convention:
 - **No flashy feedback.** No particles, no confetti, no screen shake, no score popups.
 - **Motion budget:** max 300 ms, ease-out cubic only. Fade in 180 ms, fade out 250 ms,
   lift 150 ms. No bounce, no overshoot.
-- **Muted palette**, one accent, no alarm red. An invalid placement is a dim outline.
-- **Audio off by default.** One soft sine tone on a clear only, gain capped at 0.06.
+- **Muted palette**, one accent, no alarm red. An invalid placement shows the clashing cells
+  as grey with their own outline, and the piece outline goes thicker.
+- **Audio off by default.** One soft sine tone on a clear only, gain capped at 0.12. The
+  sound button names the action it performs, so it never reads as the opposite of what you
+  hear.
 - **No dark patterns:** no daily streaks, achievements, leaderboards, ads, IAP,
   notifications, telemetry, or network calls. Fully offline.
 - **End of game** is a calm summary, not a celebration.

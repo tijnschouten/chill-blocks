@@ -5,7 +5,7 @@ use chillblocks_core::piece::Shape;
 use crate::color::Color;
 use crate::geometry::{FPoint, Rect};
 use crate::input::PointerKind;
-use crate::layout::Layout;
+use crate::layout::{Layout, SOUND_BUTTON};
 use crate::motion::{progress, FADE_IN_MS, FADE_OUT_MS, LIFT_MS};
 use crate::painter::{Align, Baseline, Painter};
 use crate::theme::Theme;
@@ -180,8 +180,8 @@ fn draw_drag(
             y: drag.pointer.y - lift - drag.grab.1 as f32 * size,
         },
     };
-    // Cells that would land on an already occupied square are drawn muted, so the clash
-    // shows on the piece itself and not only in the outline.
+    // Cells that would land on an already occupied square are drawn as grey with their own
+    // outline, so the clash shows on the piece itself and not only in the outer outline.
     for (dx, dy) in shape.cells() {
         let cell = Rect::new(
             origin.x + dx as f32 * size,
@@ -194,13 +194,13 @@ fn draw_drag(
                 .color_at(x + dx as usize, y + dy as usize)
                 .is_some()
         });
-        let cell_color = if blocked { theme.text_muted } else { color };
-        let alpha = if blocked { 0.45 } else { 0.7 };
-        painter.fill_round_rect(
-            &inset(&cell, size * 0.08),
-            layout.radius,
-            cell_color.with_alpha(alpha),
-        );
+        let inner = inset(&cell, size * 0.08);
+        if blocked {
+            painter.fill_round_rect(&inner, layout.radius, theme.text_muted.with_alpha(0.75));
+            painter.stroke_round_rect(&inner, layout.radius, 2.0, theme.text.with_alpha(0.6));
+        } else {
+            painter.fill_round_rect(&inner, layout.radius, color.with_alpha(0.7));
+        }
     }
 
     // The held cell is a little stronger, so the anchor you are moving is visible.
@@ -281,17 +281,22 @@ fn draw_tray(
 }
 
 fn draw_footer(layout: &Layout, view: &View, theme: &Theme, painter: &mut dyn Painter) {
+    // The button says what pressing it does, not what the current state is: a label reading
+    // "Sound off" while sound is off reads as an action, and that is what people expect.
     let labels = [
         if view.sound_on {
-            "Sound on"
+            "Turn sound off"
         } else {
-            "Sound off"
+            "Turn sound on"
         },
         "New game",
     ];
     let size = (layout.footer.h * 0.36).clamp(13.0, 18.0);
     for (i, rect) in layout.buttons.iter().enumerate() {
         painter.fill_round_rect(rect, layout.radius * 1.4, theme.panel);
+        if i == SOUND_BUTTON && view.sound_on {
+            painter.stroke_round_rect(rect, layout.radius * 1.4, 1.5, theme.accent);
+        }
         painter.text(
             rect.x + rect.w / 2.0,
             rect.y + rect.h / 2.0,

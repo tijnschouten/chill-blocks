@@ -6,7 +6,9 @@ pub struct Tone {
     pub duration_ms: f32,
 }
 
-pub const MAX_GAIN: f32 = 0.06;
+/// Raised from 0.06 because that was inaudible on a phone speaker. Still a quiet single
+/// sine, and still the only sound the game can make.
+pub const MAX_GAIN: f32 = 0.12;
 
 impl Tone {
     pub fn new(freq: f32, gain: f32, duration_ms: f32) -> Self {

@@ -187,6 +187,59 @@ fn the_scene_uses_only_the_allowed_primitives() {
 }
 
 #[test]
+fn the_sound_button_labels_the_action_not_the_state() {
+    let game = Game::new(7);
+
+    let off = View::new();
+    assert!(render(&game, &off, 0.0)
+        .iter()
+        .any(|op| op.contains("Turn sound on")));
+
+    let mut on = View::new();
+    on.sound_on = true;
+    assert!(render(&game, &on, 0.0)
+        .iter()
+        .any(|op| op.contains("Turn sound off")));
+}
+
+#[test]
+fn a_blocked_cell_gets_its_own_outline() {
+    let layout = compute(390.0, 844.0, ZERO_INSETS);
+    let mut game = Game::new(7);
+    let piece = game.tray[0].unwrap();
+    let shape = *game.shape(piece);
+    let (dx, dy) = shape.cells().next().unwrap();
+    game.board.set(dx as usize, dy as usize, piece.color);
+
+    let slot = layout.slots[0];
+    let grab = layout.slot_cell_at(0, slot.center(), &shape);
+
+    let mut view = View::new();
+    view.drag = Some(chillblocks_ui::view::Drag {
+        slot: 0,
+        pointer: slot.center(),
+        origin: slot.center(),
+        started: 0.0,
+        moved: false,
+        kind: chillblocks_ui::input::PointerKind::Mouse,
+        grab,
+        target: Some((0, 0)),
+    });
+
+    let ops = render(&game, &view, 0.0);
+    assert!(
+        ops.iter()
+            .any(|op| op.starts_with("stroke") && op.contains("w2.00")),
+        "the clashing cell is outlined on its own, not only by the outer outline"
+    );
+    assert!(
+        ops.iter()
+            .any(|op| op.starts_with("stroke") && op.contains("w2.50")),
+        "the whole piece outline is thicker while the placement is invalid"
+    );
+}
+
+#[test]
 fn nothing_in_the_scene_is_animated_past_the_motion_budget() {
     // The only easing is a bounded ease-out, so a frame past the budget must look
     // exactly like the final frame.
