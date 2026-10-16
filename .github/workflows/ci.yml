@@ -13,6 +13,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.92.0
         with:
           targets: wasm32-unknown-unknown
+          components: rustfmt, clippy
 
       - name: Format
         run: cargo fmt --check
