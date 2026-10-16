@@ -1,0 +1,36 @@
+/* Safe-area insets are read by the app through these custom properties, so the layout
+   respects notches and home indicators without any platform-specific code. */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #f2efe8;
+  color: #4b4a44;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+#game {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Dragging a piece must not scroll or trigger browser gestures. */
+  touch-action: none;
+  outline: none;
+}
+
+#error {
+  padding: 1rem;
+  font-size: 0.95rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The renderer's motion budget is already small; the app exposes motion_scale for a
+     user-facing reduced-motion setting in v2. */
+}

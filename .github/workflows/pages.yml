@@ -1,0 +1,58 @@
+name: pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Required by actions/deploy-pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; the newest push wins.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@1.92.0
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-bindgen
+        # Must match the wasm-bindgen version in Cargo.toml, or the generated
+        # bindings and the runtime disagree.
+        run: cargo install wasm-bindgen-cli --version 0.2.129
+
+      - name: Build the wasm module
+        run: cargo build --target wasm32-unknown-unknown -p chillblocks-app --release
+
+      - name: Assemble the static site
+        run: |
+          mkdir -p dist
+          cp web/index.html web/style.css web/main.js dist/
+          wasm-bindgen --target web --out-dir dist/pkg \
+            target/wasm32-unknown-unknown/release/chillblocks_app.wasm
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,31 @@
+[package]
+name = "chillblocks-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+chillblocks-core = { path = "../chillblocks-core" }
+chillblocks-ui = { path = "../chillblocks-ui" }
+chillblocks-platform = { path = "../chillblocks-platform" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2.129"
+js-sys = "0.3"
+web-sys = { version = "0.3.106", features = [
+    "Window",
+    "Document",
+    "Element",
+    "EventTarget",
+    "HtmlCanvasElement",
+    "HtmlElement",
+    "CssStyleDeclaration",
+    "PointerEvent",
+    "KeyboardEvent",
+    "MouseEvent",
+    "DomRect",
+    "Performance",
+] }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
