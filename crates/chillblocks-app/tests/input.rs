@@ -175,6 +175,42 @@ fn a_selection_does_not_highlight_a_cell_until_the_player_points_at_one() {
 }
 
 #[test]
+fn selecting_another_piece_does_not_carry_over_the_previous_pieces_cursor() {
+    let mut app = app();
+    let slot_center = app.layout.slots[0].center();
+    app.handle_pointer(&event(PointerPhase::Down, slot_center));
+    app.handle_pointer(&event(PointerPhase::Up, slot_center));
+    app.handle_pointer(&event(PointerPhase::Move, cell_center(&app, 5, 7)));
+    assert!(app.view.cursor_set);
+
+    let other = app.layout.slots[1].center();
+    app.handle_pointer(&event(PointerPhase::Down, other));
+    app.handle_pointer(&event(PointerPhase::Up, other));
+
+    assert_eq!(app.view.selected, Some(1));
+    assert!(
+        !app.view.cursor_set,
+        "the highlight belongs to the piece in hand, not to where the last one went"
+    );
+}
+
+#[test]
+fn moving_off_the_board_clears_the_cursor_highlight() {
+    let mut app = app();
+    let slot_center = app.layout.slots[0].center();
+    app.handle_pointer(&event(PointerPhase::Down, slot_center));
+    app.handle_pointer(&event(PointerPhase::Up, slot_center));
+    app.handle_pointer(&event(PointerPhase::Move, cell_center(&app, 3, 4)));
+    assert!(app.view.cursor_set);
+
+    app.handle_pointer(&event(PointerPhase::Move, app.layout.slots[1].center()));
+    assert!(
+        !app.view.cursor_set,
+        "the highlight follows the pointer and does not linger on the board"
+    );
+}
+
+#[test]
 fn the_piece_keeps_its_grab_cell_under_the_pointer() {
     let mut app = app();
     let slot_center = app.layout.slots[0].center();

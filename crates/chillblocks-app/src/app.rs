@@ -117,6 +117,10 @@ impl App {
                                 target,
                             });
                             self.view.selected = Some(slot);
+                            // A pointer selection has no target until the pointer is on the
+                            // board, so a stale cursor from the previous piece must not carry
+                            // over onto the new one.
+                            self.view.cursor_set = false;
                             self.view.dirty = true;
                         }
                     }
@@ -145,12 +149,21 @@ impl App {
                     }
                     self.view.dirty = true;
                 } else if self.view.selected.is_some() {
-                    if let Some(cell) = self.layout.cell_at(event.point) {
-                        if cell != self.view.cursor {
-                            self.view.cursor = cell;
-                            self.view.cursor_set = true;
+                    match self.layout.cell_at(event.point) {
+                        Some(cell) => {
+                            if cell != self.view.cursor {
+                                self.view.cursor = cell;
+                                self.view.cursor_set = true;
+                                self.view.dirty = true;
+                            }
+                        }
+                        // The highlight follows where the pointer actually is. Leaving the
+                        // board removes it instead of leaving a stale target on the board.
+                        None if self.view.cursor_set => {
+                            self.view.cursor_set = false;
                             self.view.dirty = true;
                         }
+                        None => {}
                     }
                 }
             }

@@ -180,8 +180,10 @@ fn draw_drag(
             y: drag.pointer.y - lift - drag.grab.1 as f32 * size,
         },
     };
-    // Cells that would land on an already occupied square are drawn as grey with their own
-    // outline, so the clash shows on the piece itself and not only in the outer outline.
+    // Cells that would land on an already occupied square keep the existing block visible:
+    // a light fill with the outline on the whole cell, so the clash reads as a ring around
+    // the block that is already there rather than a colour change on the piece.
+    let mut held_blocked = false;
     for (dx, dy) in shape.cells() {
         let cell = Rect::new(
             origin.x + dx as f32 * size,
@@ -194,27 +196,37 @@ fn draw_drag(
                 .color_at(x + dx as usize, y + dy as usize)
                 .is_some()
         });
-        let inner = inset(&cell, size * 0.08);
         if blocked {
-            painter.fill_round_rect(&inner, layout.radius, theme.text_muted.with_alpha(0.75));
-            painter.stroke_round_rect(&inner, layout.radius, 2.0, theme.text.with_alpha(0.6));
+            if usize::from(dx) == drag.grab.0 && usize::from(dy) == drag.grab.1 {
+                held_blocked = true;
+            }
+            let inner = inset(&cell, size * 0.08);
+            painter.fill_round_rect(&inner, layout.radius, theme.text_muted.with_alpha(0.22));
+            painter.stroke_round_rect(&cell, layout.radius, 2.0, theme.text.with_alpha(0.75));
         } else {
-            painter.fill_round_rect(&inner, layout.radius, color.with_alpha(0.7));
+            painter.fill_round_rect(
+                &inset(&cell, size * 0.08),
+                layout.radius,
+                color.with_alpha(0.7),
+            );
         }
     }
 
-    // The held cell is a little stronger, so the anchor you are moving is visible.
-    let held = Rect::new(
-        origin.x + drag.grab.0 as f32 * size,
-        origin.y + drag.grab.1 as f32 * size,
-        size,
-        size,
-    );
-    painter.fill_round_rect(
-        &inset(&held, size * 0.08),
-        layout.radius,
-        color.with_alpha(0.9),
-    );
+    // The held cell is a little stronger, so the anchor you are moving is visible. When the
+    // held cell is the clashing one, the conflict matters more than the anchor.
+    if !held_blocked {
+        let held = Rect::new(
+            origin.x + drag.grab.0 as f32 * size,
+            origin.y + drag.grab.1 as f32 * size,
+            size,
+            size,
+        );
+        painter.fill_round_rect(
+            &inset(&held, size * 0.08),
+            layout.radius,
+            color.with_alpha(0.9),
+        );
+    }
 
     if let Some((x, y)) = drag.target {
         let bounds = Rect::new(
@@ -480,6 +492,16 @@ mod tests {
                 .iter()
                 .any(|(_, color)| (color.r, color.g, color.b) == (muted.r, muted.g, muted.b)),
             "a cell that clashes with an occupied square is drawn muted"
+        );
+        assert!(
+            recording
+                .fills
+                .iter()
+                .any(
+                    |(_, color)| (color.r, color.g, color.b) == (muted.r, muted.g, muted.b)
+                        && color.a <= 0.3
+                ),
+            "the clashing cell has to stay translucent so the block underneath shows through"
         );
     }
 
