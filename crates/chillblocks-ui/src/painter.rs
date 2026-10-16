@@ -1,5 +1,5 @@
 use crate::color::Color;
-use crate::geometry::Rect;
+use crate::geometry::{FPoint, Rect};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Align {
@@ -46,6 +46,8 @@ pub trait Painter {
     fn clear(&mut self, background: Color);
     fn fill_round_rect(&mut self, rect: &Rect, radius: f32, color: Color);
     fn stroke_round_rect(&mut self, rect: &Rect, radius: f32, width: f32, color: Color);
+    /// A straight segment. Used for the cross that marks a cell the piece cannot land on.
+    fn line(&mut self, from: FPoint, to: FPoint, width: f32, color: Color);
     fn text(&mut self, x: f32, y: f32, content: &str, style: &TextStyle);
 
     /// Backends that need to know the device pixel ratio can override this.
@@ -73,6 +75,16 @@ mod tests {
             self.0
                 .push(format!("stroke r{radius} w{width} {}", color.css()));
         }
+        fn line(&mut self, from: FPoint, to: FPoint, width: f32, color: Color) {
+            self.0.push(format!(
+                "line {:.1},{:.1} {:.1},{:.1} w{width} {}",
+                from.x,
+                from.y,
+                to.x,
+                to.y,
+                color.css()
+            ));
+        }
         fn text(&mut self, x: f32, y: f32, content: &str, style: &TextStyle) {
             self.0
                 .push(format!("text {x} {y} {content} {}", style.color.css()));
@@ -92,7 +104,13 @@ mod tests {
             1.0,
             Color::rgb(4, 5, 6),
         );
+        painter.line(
+            FPoint { x: 0.0, y: 0.0 },
+            FPoint { x: 10.0, y: 10.0 },
+            1.0,
+            Color::rgb(4, 5, 6),
+        );
         painter.text(1.0, 2.0, "hi", &TextStyle::new(12.0, Color::rgb(7, 8, 9)));
-        assert_eq!(recording.0.len(), 5);
+        assert_eq!(recording.0.len(), 6);
     }
 }

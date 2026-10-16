@@ -37,6 +37,7 @@ impl Painter for TestPainter {
     fn clear(&mut self, _c: Color) {}
     fn fill_round_rect(&mut self, _r: &Rect, _radius: f32, _c: Color) {}
     fn stroke_round_rect(&mut self, _r: &Rect, _radius: f32, _w: f32, _c: Color) {}
+    fn line(&mut self, _from: FPoint, _to: FPoint, _w: f32, _c: Color) {}
     fn text(&mut self, _x: f32, _y: f32, _s: &str, _style: &TextStyle) {}
 }
 

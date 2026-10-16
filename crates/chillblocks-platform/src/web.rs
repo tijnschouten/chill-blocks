@@ -2,7 +2,7 @@ use wasm_bindgen::JsCast;
 use web_sys::{AudioContext, CanvasRenderingContext2d, HtmlCanvasElement, Storage};
 
 use chillblocks_ui::color::Color;
-use chillblocks_ui::geometry::Rect;
+use chillblocks_ui::geometry::{FPoint, Rect};
 use chillblocks_ui::painter::{Align, Baseline, Painter, TextStyle};
 
 use crate::traits::{AudioSink, Clock, Store, Tone};
@@ -76,6 +76,15 @@ impl Painter for WebPainter {
             rect.h as f64,
             radius as f64,
         );
+        self.ctx.set_line_width(width as f64);
+        self.ctx.set_stroke_style_str(&color.css());
+        self.ctx.stroke();
+    }
+
+    fn line(&mut self, from: FPoint, to: FPoint, width: f32, color: Color) {
+        let _ = self.ctx.begin_path();
+        let _ = self.ctx.move_to(from.x as f64, from.y as f64);
+        let _ = self.ctx.line_to(to.x as f64, to.y as f64);
         self.ctx.set_line_width(width as f64);
         self.ctx.set_stroke_style_str(&color.css());
         self.ctx.stroke();

@@ -200,9 +200,38 @@ fn draw_drag(
             if usize::from(dx) == drag.grab.0 && usize::from(dy) == drag.grab.1 {
                 held_blocked = true;
             }
+            // A clashing cell otherwise looks exactly like a placed block: same colour,
+            // same alpha, same size. The light fill keeps the existing block visible and the
+            // cross marks that the piece cannot land here.
             let inner = inset(&cell, size * 0.08);
             painter.fill_round_rect(&inner, layout.radius, theme.text_muted.with_alpha(0.22));
             painter.stroke_round_rect(&cell, layout.radius, 2.0, theme.text.with_alpha(0.75));
+            let arm = size * 0.26;
+            let mark = theme.text.with_alpha(0.8);
+            painter.line(
+                FPoint {
+                    x: cell.x + arm,
+                    y: cell.y + arm,
+                },
+                FPoint {
+                    x: cell.x + size - arm,
+                    y: cell.y + size - arm,
+                },
+                1.5,
+                mark,
+            );
+            painter.line(
+                FPoint {
+                    x: cell.x + size - arm,
+                    y: cell.y + arm,
+                },
+                FPoint {
+                    x: cell.x + arm,
+                    y: cell.y + size - arm,
+                },
+                1.5,
+                mark,
+            );
         } else {
             painter.fill_round_rect(
                 &inset(&cell, size * 0.08),
@@ -400,6 +429,7 @@ mod tests {
 
     struct Recording {
         fills: Vec<(Rect, Color)>,
+        lines: Vec<(FPoint, FPoint, f32, Color)>,
     }
 
     impl Painter for Recording {
@@ -409,6 +439,9 @@ mod tests {
             self.fills.push((*rect, color));
         }
         fn stroke_round_rect(&mut self, _rect: &Rect, _radius: f32, _width: f32, _color: Color) {}
+        fn line(&mut self, from: FPoint, to: FPoint, width: f32, color: Color) {
+            self.lines.push((from, to, width, color));
+        }
         fn text(&mut self, _x: f32, _y: f32, _content: &str, _style: &TextStyle) {}
     }
 
@@ -432,7 +465,10 @@ mod tests {
             target: None,
         });
 
-        let mut recording = Recording { fills: Vec::new() };
+        let mut recording = Recording {
+            fills: Vec::new(),
+            lines: Vec::new(),
+        };
         draw(&layout, &game, &view, &mut recording, 0.0);
 
         let panel = recording
@@ -482,7 +518,10 @@ mod tests {
             target: Some((0, 0)),
         });
 
-        let mut recording = Recording { fills: Vec::new() };
+        let mut recording = Recording {
+            fills: Vec::new(),
+            lines: Vec::new(),
+        };
         draw(&layout, &game, &view, &mut recording, 0.0);
 
         let muted = theme().text_muted;

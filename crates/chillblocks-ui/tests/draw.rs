@@ -1,7 +1,7 @@
 use chillblocks_core::game::{Game, Status};
 use chillblocks_ui::color::Color;
 use chillblocks_ui::draw::draw;
-use chillblocks_ui::geometry::Rect;
+use chillblocks_ui::geometry::{FPoint, Rect};
 use chillblocks_ui::layout::{compute, ZERO_INSETS};
 use chillblocks_ui::painter::{Painter, TextStyle};
 use chillblocks_ui::view::View;
@@ -42,6 +42,17 @@ impl Painter for Recording {
             rect.w,
             rect.h,
             radius,
+            width,
+            color.css()
+        ));
+    }
+    fn line(&mut self, from: FPoint, to: FPoint, width: f32, color: Color) {
+        self.ops.push(format!(
+            "line {:.1},{:.1} {:.1},{:.1} w{:.2} {}",
+            from.x,
+            from.y,
+            to.x,
+            to.y,
             width,
             color.css()
         ));
@@ -231,6 +242,16 @@ fn a_blocked_cell_gets_its_own_outline() {
         ops.iter()
             .any(|op| op.starts_with("stroke") && op.contains("w2.00")),
         "the clashing cell is outlined on its own, not only by the outer outline"
+    );
+    assert!(
+        ops.iter()
+            .any(|op| op.starts_with("line") && op.contains("w1.50")),
+        "the clashing cell is crossed, so it does not read as an ordinary placed block"
+    );
+    assert_eq!(
+        ops.iter().filter(|op| op.starts_with("line")).count(),
+        2,
+        "a cross is two strokes, one on each diagonal"
     );
     assert!(
         ops.iter()
