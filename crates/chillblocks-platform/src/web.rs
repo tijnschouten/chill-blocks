@@ -192,7 +192,7 @@ impl AudioSink for WebAudio {
             Err(_) => return false,
         };
 
-        let start = context.current_time();
+        let start = context.current_time() + 0.05;
         let duration = (tone.duration_ms as f64 / 1000.0).clamp(0.05, 0.6);
         let attack = duration.min(0.03);
 

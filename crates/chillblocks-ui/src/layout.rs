@@ -99,8 +99,9 @@ impl Layout {
     }
 
     /// Where a dragged piece lands, accounting for the touch lift and for which cell of
-    /// the shape the finger is holding. Returns None when the grab puts the shape outside
-    /// the board, which is the same as dragging off the board.
+    /// the shape the finger is holding. The anchor is clamped so the piece always stays
+    /// inside the board: reaching the far edge with a wide piece does not require the finger
+    /// to be off the board. Returns None only when the pointer is not over the board at all.
     pub fn drag_anchor(
         &self,
         p: FPoint,
@@ -112,13 +113,12 @@ impl Layout {
             x: p.x,
             y: p.y - lift,
         })?;
-        if cell.0 < grab.0 || cell.1 < grab.1 {
-            return None;
-        }
-        let anchor = (cell.0 - grab.0, cell.1 - grab.1);
-        if anchor.0 + shape.w as usize > BOARD_SIZE || anchor.1 + shape.h as usize > BOARD_SIZE {
-            return None;
-        }
+        let max_x = BOARD_SIZE as i64 - shape.w as i64;
+        let max_y = BOARD_SIZE as i64 - shape.h as i64;
+        let anchor = (
+            (cell.0 as i64 - grab.0 as i64).clamp(0, max_x) as usize,
+            (cell.1 as i64 - grab.1 as i64).clamp(0, max_y) as usize,
+        );
         Some(anchor)
     }
 
@@ -355,20 +355,32 @@ mod tests {
             y: l.board.y + l.cell * 3.5,
         };
         assert_eq!(l.drag_anchor(p, 0.0, (3, 0), bar), Some((2, 3)));
+    }
 
-        // A grab that would push the piece off the top edge is the same as dragging off
-        // the board, so the piece is drawn un-snapped rather than half outside.
-        assert_eq!(l.drag_anchor(p, 0.0, (3, 0), bar).map(|a| a.1), Some(3));
+    #[test]
+    fn the_anchor_is_clamped_so_the_piece_needs_to_be_off_the_board() {
+        let l = compute(390.0, 844.0, ZERO_INSETS);
+        let bar = SHAPES.iter().find(|s| s.w == 4 && s.h == 1).unwrap();
+
+        // Held by its right end, finger on the far right: the piece still fits, so the
+        // whole right edge of the board is reachable without the finger leaving the board.
+        let right = FPoint {
+            x: l.board.x + l.cell * 7.5,
+            y: l.board.y + l.cell * 3.5,
+        };
+        assert_eq!(l.drag_anchor(right, 0.0, (3, 0), bar), Some((4, 3)));
+
+        // Held by its left end near the left edge: the anchor would be negative, so it is
+        // clamped to the board rather than lost.
+        let left = FPoint {
+            x: l.board.x + l.cell * 1.5,
+            y: l.board.y + l.cell * 3.5,
+        };
+        assert_eq!(l.drag_anchor(left, 0.0, (3, 0), bar), Some((0, 3)));
+
+        // Only a pointer that is not over the board at all has no target.
         assert_eq!(
-            l.drag_anchor(
-                FPoint {
-                    x: l.board.x + l.cell * 1.5,
-                    y: l.board.y + l.cell * 3.5,
-                },
-                0.0,
-                (3, 0),
-                bar
-            ),
+            l.drag_anchor(FPoint { x: 5.0, y: 5.0 }, 0.0, (3, 0), bar),
             None
         );
     }

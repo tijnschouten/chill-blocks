@@ -5,7 +5,7 @@
 
 use chillblocks_core::game::{Game, PlaceError, Status};
 use chillblocks_core::snapshot;
-use chillblocks_platform::traits::{AudioSink, Clock, Store, Tone};
+use chillblocks_platform::traits::{AudioSink, Clock, Store, Tone, MAX_GAIN};
 use chillblocks_ui::draw::draw;
 use chillblocks_ui::input::{Command, PointerEvent, PointerKind, PointerPhase};
 use chillblocks_ui::layout::{self, Insets, Layout, NEW_GAME_BUTTON, SOUND_BUTTON};
@@ -18,12 +18,12 @@ pub const SETTINGS_KEY: &str = "chillblocks.settings";
 
 /// A clear is the only thing that makes a sound during play, and only if the player opted in.
 fn clear_tone() -> Tone {
-    Tone::new(392.0, 0.05, 260.0)
+    Tone::new(392.0, MAX_GAIN, 260.0)
 }
 
 /// Heard once when sound is switched on, so the player knows the audio device is live.
 fn confirm_tone() -> Tone {
-    Tone::new(294.0, 0.04, 180.0)
+    Tone::new(294.0, MAX_GAIN, 180.0)
 }
 
 fn lift_for(kind: PointerKind, cell: f32) -> f32 {
@@ -148,6 +148,7 @@ impl App {
                     if let Some(cell) = self.layout.cell_at(event.point) {
                         if cell != self.view.cursor {
                             self.view.cursor = cell;
+                            self.view.cursor_set = true;
                             self.view.dirty = true;
                         }
                     }
@@ -174,6 +175,9 @@ impl App {
             Command::SelectSlot(slot) => {
                 if self.game.tray[slot].is_some() {
                     self.view.selected = Some(slot);
+                    // On the keyboard the cursor is the placement anchor, so a selection
+                    // always has a target to show.
+                    self.view.cursor_set = true;
                     self.view.dirty = true;
                 }
             }
@@ -183,6 +187,7 @@ impl App {
                 let ny = (y as isize + dy).clamp(0, 7) as usize;
                 if (nx, ny) != (x, y) {
                     self.view.cursor = (nx, ny);
+                    self.view.cursor_set = true;
                     self.view.dirty = true;
                 }
             }

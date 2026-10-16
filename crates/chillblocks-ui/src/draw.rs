@@ -136,7 +136,7 @@ fn draw_board(
         );
     }
 
-    if view.selected.is_some() && game.status == Status::Playing {
+    if view.selected.is_some() && view.cursor_set && game.status == Status::Playing {
         let rect = layout.cell_rect(view.cursor.0, view.cursor.1);
         painter.stroke_round_rect(&rect, layout.radius, 1.5, theme.accent);
     }
@@ -180,7 +180,28 @@ fn draw_drag(
             y: drag.pointer.y - lift - drag.grab.1 as f32 * size,
         },
     };
-    draw_cells(painter, origin, shape, size, color, layout.radius, 0.7);
+    // Cells that would land on an already occupied square are drawn muted, so the clash
+    // shows on the piece itself and not only in the outline.
+    for (dx, dy) in shape.cells() {
+        let cell = Rect::new(
+            origin.x + dx as f32 * size,
+            origin.y + dy as f32 * size,
+            size,
+            size,
+        );
+        let blocked = drag.target.is_some_and(|(x, y)| {
+            game.board
+                .color_at(x + dx as usize, y + dy as usize)
+                .is_some()
+        });
+        let cell_color = if blocked { theme.text_muted } else { color };
+        let alpha = if blocked { 0.45 } else { 0.7 };
+        painter.fill_round_rect(
+            &inset(&cell, size * 0.08),
+            layout.radius,
+            cell_color.with_alpha(alpha),
+        );
+    }
 
     // The held cell is a little stronger, so the anchor you are moving is visible.
     let held = Rect::new(
@@ -202,16 +223,14 @@ fn draw_drag(
             shape.w as f32 * layout.cell,
             shape.h as f32 * layout.cell,
         );
-        // A valid target gets an accent outline; an invalid one is muted, never red.
+        let fits = game.board.can_fit(shape, x, y);
+        // A valid target gets an accent outline; an invalid one is a thicker muted one,
+        // never alarm red.
         painter.stroke_round_rect(
             &bounds,
             layout.radius,
-            1.5,
-            if game.board.can_fit(shape, x, y) {
-                theme.accent
-            } else {
-                theme.text_muted
-            },
+            if fits { 1.5 } else { 2.5 },
+            if fits { theme.accent } else { theme.text_muted },
         );
     }
 }
@@ -363,14 +382,14 @@ mod tests {
     use chillblocks_core::game::Game;
 
     struct Recording {
-        fills: Vec<(Rect, String)>,
+        fills: Vec<(Rect, Color)>,
     }
 
     impl Painter for Recording {
         fn begin(&mut self, _width: f32, _height: f32) {}
         fn clear(&mut self, _background: Color) {}
         fn fill_round_rect(&mut self, rect: &Rect, _radius: f32, color: Color) {
-            self.fills.push((*rect, color.css()));
+            self.fills.push((*rect, color));
         }
         fn stroke_round_rect(&mut self, _rect: &Rect, _radius: f32, _width: f32, _color: Color) {}
         fn text(&mut self, _x: f32, _y: f32, _content: &str, _style: &TextStyle) {}
@@ -406,15 +425,56 @@ mod tests {
                 (rect.x - slot.x).abs() < 0.001 && (rect.y - slot.y).abs() < 0.001
             })
             .expect("the tray slot panel is drawn");
+        let piece_color = theme().palette[piece.color as usize];
         let held = recording
             .fills
             .iter()
-            .position(|(_, color)| *color == theme().palette[piece.color as usize].css())
+            .position(|(_, color)| {
+                (color.r, color.g, color.b) == (piece_color.r, piece_color.g, piece_color.b)
+            })
             .expect("the dragged piece is drawn");
 
         assert!(
             held > panel,
             "the piece in hand must be drawn after the slot panel, not under it"
+        );
+    }
+
+    #[test]
+    fn a_blocked_cell_is_drawn_muted() {
+        let layout = compute(390.0, 844.0, ZERO_INSETS);
+        let mut game = Game::new(7);
+        let piece = game.tray[0].unwrap();
+        let shape = game.shape(piece);
+        let slot = layout.slots[0];
+        let grab = layout.slot_cell_at(0, slot.center(), shape);
+
+        // Occupy a square the piece actually covers when its anchor is (0, 0).
+        let (dx, dy) = game.shape(piece).cells().next().unwrap();
+        game.board.set(dx as usize, dy as usize, piece.color);
+
+        let mut view = View::new();
+        view.drag = Some(Drag {
+            slot: 0,
+            pointer: slot.center(),
+            origin: slot.center(),
+            started: 0.0,
+            moved: false,
+            kind: PointerKind::Mouse,
+            grab,
+            target: Some((0, 0)),
+        });
+
+        let mut recording = Recording { fills: Vec::new() };
+        draw(&layout, &game, &view, &mut recording, 0.0);
+
+        let muted = theme().text_muted;
+        assert!(
+            recording
+                .fills
+                .iter()
+                .any(|(_, color)| (color.r, color.g, color.b) == (muted.r, muted.g, muted.b)),
+            "a cell that clashes with an occupied square is drawn muted"
         );
     }
 

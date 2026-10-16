@@ -37,6 +37,9 @@ pub struct View {
     pub drag: Option<Drag>,
     pub selected: Option<usize>,
     pub cursor: (usize, usize),
+    /// Whether the cursor has been aimed at all. A selection on its own does not imply a
+    /// target, so nothing is highlighted until the player actually points somewhere.
+    pub cursor_set: bool,
     pub ghosts: Vec<Ghost>,
     pub appear: [f64; BOARD_CELLS],
     pub best: u32,
@@ -57,6 +60,7 @@ impl View {
             drag: None,
             selected: None,
             cursor: (0, 0),
+            cursor_set: false,
             ghosts: Vec::new(),
             appear: [0.0; BOARD_CELLS],
             best: 0,
@@ -70,6 +74,7 @@ impl View {
         self.drag = None;
         self.selected = None;
         self.cursor = (0, 0);
+        self.cursor_set = false;
         self.ghosts.clear();
         self.appear = [0.0; BOARD_CELLS];
         self.dirty = true;

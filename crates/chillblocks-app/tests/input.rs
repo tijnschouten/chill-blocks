@@ -160,6 +160,21 @@ fn a_placement_that_does_not_fit_is_rejected_without_changing_the_game() {
 }
 
 #[test]
+fn a_selection_does_not_highlight_a_cell_until_the_player_points_at_one() {
+    let mut app = app();
+    let slot_center = app.layout.slots[0].center();
+    app.handle_pointer(&event(PointerPhase::Down, slot_center));
+    app.handle_pointer(&event(PointerPhase::Up, slot_center));
+
+    assert_eq!(app.view.selected, Some(0));
+    assert!(!app.view.cursor_set, "a selection alone has no target");
+
+    app.handle_pointer(&event(PointerPhase::Move, cell_center(&app, 3, 4)));
+    assert!(app.view.cursor_set);
+    assert_eq!(app.view.cursor, (3, 4));
+}
+
+#[test]
 fn the_piece_keeps_its_grab_cell_under_the_pointer() {
     let mut app = app();
     let slot_center = app.layout.slots[0].center();

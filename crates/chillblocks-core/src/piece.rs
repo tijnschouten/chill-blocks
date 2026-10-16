@@ -47,7 +47,7 @@ pub const SHAPES: &[Shape] = &[
     shape(3, 2, [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
     shape(2, 4, [1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]),
     // Z tetrominoes.
-    shape(3, 2, [1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    shape(3, 2, [1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
     shape(2, 3, [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
     // Plus.
     shape(3, 3, [0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]),
@@ -92,6 +92,23 @@ mod tests {
             for &v in &s.mask[used..] {
                 assert_eq!(v, 0, "mask set outside its bounding box");
             }
+        }
+    }
+
+    /// The anchor is the top-left of the bounding box, so a shape with an empty edge row or
+    /// column would place and highlight offset from the cells the player can see.
+    #[test]
+    fn every_shape_is_tightly_bounded() {
+        for s in SHAPES {
+            let cells = s.cells().collect::<Vec<_>>();
+            let min_x = cells.iter().map(|(x, _)| *x).min().unwrap();
+            let max_x = cells.iter().map(|(x, _)| *x).max().unwrap();
+            let min_y = cells.iter().map(|(_, y)| *y).min().unwrap();
+            let max_y = cells.iter().map(|(_, y)| *y).max().unwrap();
+            assert_eq!(min_x, 0, "shape {s:?} has an empty left column");
+            assert_eq!(min_y, 0, "shape {s:?} has an empty top row");
+            assert_eq!(max_x + 1, s.w, "shape {s:?} has an empty right column");
+            assert_eq!(max_y + 1, s.h, "shape {s:?} has an empty bottom row");
         }
     }
 
